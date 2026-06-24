@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Инклюзивное образование - Кроссворд</title>
+    <style>
+        :root {
+            --cell-size: 35px;
+            --primary-color: #2b579a;
+            --success-color: #2ca02c;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f9fbfd;
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            gap: 30px;
+            max-width: 900px;
+            width: 100%;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* Сетка кроссворда */
+        .crossword-grid {
+            display: grid;
+            grid-template-columns: repeat(11, var(--cell-size));
+            grid-template-rows: repeat(9, var(--cell-size));
+            gap: 2px;
+            background-color: #e0e0e0;
+            padding: 4px;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            user-select: none;
+        }
+
+        .cell {
+            position: relative;
+            background-color: transparent;
+        }
+
+        .cell.active {
+            background-color: #fff;
+        }
+
+        .cell input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: transparent;
+            color: #333;
+            outline: none;
+            padding: 0;
+        }
+
+        .cell input:focus {
+            background-color: #e6f2ff;
+        }
+
+        .cell.correct input {
+            background-color: #e2f0d9;
+            color: var(--success-color);
+        }
+
+        .cell .num {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 10px;
+            color: #888;
+            font-weight: bold;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        /* Блок вопросов */
+        .questions-box {
+            flex: 1;
+            min-width: 280px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .question-item {
+            margin-bottom: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .question-item:hover {
+            background-color: #f0f4f8;
+        }
+
+        .question-title {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 2px;
+        }
+
+        /* Индикатор успеха */
+        .status-message {
+            margin-top: 15px;
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--success-color);
+            display: none;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .questions-box {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h3>Разгадайте кроссворд по 5 ключевым словам темы</h3>
+
+    <div class="container">
+        <!-- Сетка кроссворда (11 колонок на 9 строк) -->
+        <div class="crossword-grid" id="grid"></div>
+
+        <!-- Вопросы -->
+        <div class="questions-box">
+            <div class="question-item" onclick="highlightWord('w1')">
+                <div class="question-title">1. По горизонтали</div>
+                Страна, где инклюзия строится через команду благополучия.
+            </div>
+            <div class="question-item" onclick="highlightWord('w2')">
+                <div class="question-title">2. По горизонтали</div>
+                Страна, где обучающийся с ООП по возможности остается частью общего образовательного процесса.
+            </div>
+            <div class="question-item" onclick="highlightWord('w3')">
+                <div class="question-title">3. По горизонтали</div>
+                Страна, где поддержку помогают организовать специализированные образовательные центры.
+            </div>
+            <div class="question-item" onclick="highlightWord('w4')">
+                <div class="question-title">4. По вертикали</div>
+                Документ или маршрут, который готовится с учетом реальных потребностей обучающегося.
+            </div>
+            <div class="question-item" onclick="highlightWord('w5')">
+                <div class="question-title">5. По горизонтали</div>
+                Один из участников поддержки обучающегося вместе с педагогами и специалистами.
+            </div>
+        </div>
+    </div>
+
+    <div class="status-message" id="win-message">🎉 Кроссворд успешно решен! Отличный результат!</div>
+
+    <script>
+        // Конфигурация слов и их координат (X, Y от 0 до 10/8)
+        // 4 слово (ПЛАН) пересекает все остальные слова по вертикали на X=4
+        const wordsConfig = {
+            w1: { word: "ФИНЛЯНДИЯ", x: 3, y: 1, dir: "h", num: 1 },
+            w2: { word: "ИТАЛИЯ",    x: 3, y: 3, dir: "h", num: 2 },
+            w3: { word: "ЧЕХИЯ",     x: 3, y: 5, dir: "h", num: 3 },
+            w4: { word: "ПЛАН",      x: 4, y: 1, dir: "v", num: 4 },
+            w5: { word: "РОДИТЕЛИ",  x: 2, y: 7, dir: "h", num: 5 }
+        };
+
+        const cols = 11;
+        const rows = 9;
+        const gridContainer = document.getElementById('grid');
+        const cellsMap = {};
+
+        // Инициализация пустой сетки матрицы
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'cell';
+                cellDiv.dataset.r = r;
+                cellDiv.dataset.c = c;
+                gridContainer.appendChild(cellDiv);
+                cellsMap[`${r}_${c}`] = { el: cellDiv, words: [], solution: '' };
+            }
+        }
+
+        // Заполнение сетки буквами из конфига
+        Object.keys(wordsConfig).forEach(wId => {
+            const cfg = wordsConfig[wId];
+            for (let i = 0; i < cfg.word.length; i++) {
+                const r = cfg.dir === 'v' ? cfg.y + i : cfg.y;
+                const c = cfg.dir === 'h' ? cfg.x + i : cfg.x;
+                
+                const cellData = cellsMap[`${r}_${c}`];
+                if (cellData) {
+                    cellData.words.push(wId);
+                    cellData.solution = cfg.word[i];
+                    cellData.el.classList.add('active');
+                    
+                    // Ставим номер вопроса в первую ячейку слова
+                    if (i === 0 && !cellData.el.querySelector('.num')) {
+                        const numSpan = document.createElement('span');
+                        numSpan.className = 'num';
+                        numSpan.innerText = cfg.num;
+                        cellData.el.appendChild(numSpan);
+                    }
+                    
+                    // Создаем инпут, если еще не создан (для пересечений)
+                    if (!cellData.el.querySelector('input')) {
+                        const input = document.createElement('input');
+                        input.maxLength = 1;
+                        input.dataset.r = r;
+                        input.dataset.c = c;
+                        
+                        // Слушатели событий ввода и навигации клавиатуры
+                        input.addEventListener('input', (e) => handleInput(e, wId));
+                        input.addEventListener('keydown', handleKeyDown);
+                        cellData.el.appendChild(input);
+                    }
+                }
+            }
+        });
+
+        // Автопереход на следующую букву при заполнении текущей
+        function handleInput(e, fallbackWordId) {
+            const input = e.target;
+            const r = parseInt(input.dataset.r);
+            const c = parseInt(input.dataset.c);
+            const val = input.value.toUpperCase();
+            input.value = val;
+
+            checkCrossword();
+
+            if (val.length === 1) {
+                // Пытаемся идти в направлении текущего слова
+                const cellData = cellsMap[`${r}_${c}`];
+                const activeWord = cellData.words[0] || fallbackWordId;
+                const cfg = wordsConfig[activeWord];
+                
+                let nextR = r + (cfg.dir === 'v' ? 1 : 0);
+                let nextC = c + (cfg.dir === 'h' ? 1 : 0);
+                
+                const nextInput = gridContainer.querySelector(`input[data-r="${nextR}"][data-c="${nextC}"]`);
+                if (nextInput) nextInput.focus();
+            }
+        }
+
+        // Навигация стрелочками клавиатуры и Backspace
+        function handleKeyDown(e) {
+            const r = parseInt(e.target.dataset.r);
+            const c = parseInt(e.target.dataset.c);
+            let targetR = r;
+            let targetC = c;
+
+            if (e.key === 'ArrowRight') targetC++;
+            else if (e.key === 'ArrowLeft') targetC--;
+            else if (e.key === 'ArrowUp') targetR--;
+            else if (e.key === 'ArrowDown') targetR++;
+            else if (e.key === 'Backspace' && e.target.value === '') {
+                // Если ячейка пуста, при Backspace возвращаемся назад (комфортно для стирания)
+                const cellData = cellsMap[`${r}_${c}`];
+                const cfg = wordsConfig[cellData.words[0]];
+                if(cfg) {
+                    targetR = r - (cfg.dir === 'v' ? 1 : 0);
+                    targetC = c - (cfg.dir === 'h' ? 1 : 0);
+                }
+            } else {
+                return;
+            }
+
+            const nextInput = gridContainer.querySelector(`input[data-r="${targetR}"][data-c="${targetC}"]`);
+            if (nextInput) {
+                nextInput.focus();
+                if (e.key === 'Backspace') e.preventDefault(); // Предотвращаем двойное стирание
+            }
+        }
+
+        // Подсветка слова при клике на вопрос в боковой панели
+        function highlightWord(wId) {
+            const cfg = wordsConfig[wId];
+            const firstInput = gridContainer.querySelector(`input[data-r="${cfg.y}"][data-c="${cfg.x}"]`);
+            if (firstInput) firstInput.focus();
+        }
+
+        // Функция проверки кроссворда
+        function checkCrossword() {
+            let allCorrect = true;
+            let hasActiveCells = false;
+
+            Object.keys(cellsMap).forEach(key => {
+                const data = cellsMap[key];
+                if (data.solution) {
+                    hasActiveCells = true;
+                    const input = data.el.querySelector('input');
+                    if (input.value.toUpperCase() === data.solution) {
+                        data.el.classList.add('correct');
+                    } else {
+                        data.el.classList.remove('correct');
+                        allCorrect = false;
+                    }
+                }
+            });
+
+            if (allCorrect && hasActiveCells) {
+                document.getElementById('win-message').style.display = 'block';
+            } else {
+                document.getElementById('win-message').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
